@@ -1,6 +1,11 @@
 ﻿namespace Formuthorpe;
 
-public class Formuthorpe
+public class Formula
 {
 
 }
+
+public class Term
+{
+}
+
