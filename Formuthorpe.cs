@@ -7,55 +7,55 @@
 public class Formula<T>
 {
     /* Fields 
-     * parentForms: A list of tuples of parent formulas and the index of this formula in their operands
+     * parentForms: A list of o3 parent formulas
      * operands:    1 or 2 form objects that make up the formula, in order 
      * operation:   function delegate based on supplied operator
      */
 
-    private List<(Formula form, int index)> parentForms;
-    private List<FormObject> operands;
-    private Func<List<FormObject>>  operation;
+    private List<Formula> parentForms = new List<Formula>();
+    private FormObject lhs;
+    private FormObject rhs;
+    private Func<> operation;
+    private T val;
 
-    public void update(FormObject child, int index)
+    public Formula (FormObject left, FormObject right, Func<List<FormObjects>> op)
     {
-        this.operands(index) = child;
+        lhs = left;
+        rhs = right;
+        operation = op; 
+    }
+
+    public void update()
+    {
+        this.val = this.evalute;
         foreach (Formula form in this.parentForms)
         {
-            form.update(this, this.parentForms.index);
+            form.update();
         }
     }
     
     public T evaluate
     {
-        return (this.operation(this.operands));
+        return this.operation?.Invoke(this.lhs, this.rhs);
     }
     
-    public void update() 
+    public void addParent(FormObject newParent)
     {
-        this.operation?.Invoke(this.operands);
+        this.parentForms.append(newParent);
     }
 
-    // Add checking for correct number of operands etc
-    private T operator +(List<FormObject> operands) 
+    public static Formula operator +(FormObject a, FormObject b)) 
     {
-        return (operands.get(0).evaluate + operands.get(1).evaluate);
-    }
-    
-    private T operator -(List<FormObject> operands) 
-    {
-        return (operands.get(0).evaluate - operands.get(1).evaluate);
+        retForm = new Formula(a, b, addition); 
+        a.addParent(retForm);
+        b.addParent(retForm);
+        return retForm;
     }
 
-    private T operator /(List<FormObject> operands) 
+    private T addition()
     {
-        return (operands.get(0).evaluate / operands.get(1).evaluate);
+        return (this.lhs.evaluate + this.rhs.evaluate);
     }
-
-    private T operator *(List<FormObject> operands) 
-    {
-        return (operands.get(0).evaluate * operands.get(1).evaluate);
-    }
-
 }
 
 public class Term<T>
@@ -64,7 +64,7 @@ public class Term<T>
      *  parentForms: A list of tuples of parent formulas and this term's index in their operands
      *  val:         value held by the term 
      */
-    private List<(Formula form, int index)> parentForms;
+    private List<Formula> parentForms = new List<Formula>();
     private T val; 
 
     public T evaluate
@@ -77,7 +77,7 @@ public class Term<T>
         this.val = newVal;
         foreach (Formula form in this.parentForms)
         {
-            form.update(this, form.index);
+            form.update();
         }
     }
 }
