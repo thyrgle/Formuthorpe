@@ -14,7 +14,7 @@ public class Formula<T>
 
     private List<(Formula form, int index)> parentForms;
     private List<FormObject> operands;
-    private Func<List<T>>  operation;
+    private Func<List<FormObject>>  operation;
 
     public void update(FormObject child, int index)
     {
@@ -36,22 +36,22 @@ public class Formula<T>
     }
 
     // Add checking for correct number of operands etc
-    private T operator +(List<T> operands) 
+    private T operator +(List<FormObject> operands) 
     {
         return (operands.get(0).evaluate + operands.get(1).evaluate);
     }
     
-    private T operator -(List<T> operands) 
+    private T operator -(List<FormObject> operands) 
     {
         return (operands.get(0).evaluate - operands.get(1).evaluate);
     }
 
-    private T operator /(List<T> operands) 
+    private T operator /(List<FormObject> operands) 
     {
         return (operands.get(0).evaluate / operands.get(1).evaluate);
     }
 
-    private T operator *(List<T> operands) 
+    private T operator *(List<FormObject> operands) 
     {
         return (operands.get(0).evaluate * operands.get(1).evaluate);
     }
@@ -69,7 +69,7 @@ public class Term<T>
 
     public T evaluate
     {
-        return val;
+        return this.val;
     }
 
     public setValue (T newVal)
@@ -79,7 +79,6 @@ public class Term<T>
         {
             form.update(this, form.index);
         }
-
     }
 }
 
