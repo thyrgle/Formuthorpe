@@ -15,10 +15,10 @@ public class Formula<T>
     private List<Formula> parentForms = new List<Formula>();
     private FormObject lhs;
     private FormObject rhs;
-    private Func<> operation;
+    private Func<T> operation;
     private T val;
 
-    public Formula (FormObject left, FormObject right, Func<List<FormObjects>> op)
+    public Formula (FormObject left, FormObject right, Func<T> op)
     {
         lhs = left;
         rhs = right;
