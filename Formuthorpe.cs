@@ -1,9 +1,5 @@
 ﻿namespace Formuthorpe;
 
-/* To figure out:
- * Constructors and making / modifying the parental tree for formObjects
- */
-
 public class Formula<T>
 {
     /* Fields 
@@ -36,7 +32,7 @@ public class Formula<T>
     
     public T evaluate
     {
-        return this.operation?.Invoke(this.lhs, this.rhs);
+        return this.operation?.Invoke();
     }
     
     public void addParent(FormObject newParent)
@@ -56,6 +52,7 @@ public class Formula<T>
     {
         return (this.lhs.evaluate + this.rhs.evaluate);
     }
+
 }
 
 public class Term<T>
@@ -67,12 +64,17 @@ public class Term<T>
     private List<Formula> parentForms = new List<Formula>();
     private T val; 
 
+    public Term(T initVal)
+    {
+        val = initVal; 
+    }
+
     public T evaluate
     {
         return this.val;
     }
 
-    public setValue (T newVal)
+    public void setValue (T newVal)
     {
         this.val = newVal;
         foreach (Formula form in this.parentForms)
