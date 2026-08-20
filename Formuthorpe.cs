@@ -3,9 +3,10 @@
 public class Formula<T>
 {
     /* Fields 
-     * parentForms: A list of o3 parent formulas
-     * operands:    1 or 2 form objects that make up the formula, in order 
-     * operation:   function delegate based on supplied operator
+     * parentForms: A list of parent formulas
+     * lhs:         Left hand side of the operation, only operand if unary
+     * rhs:         Right hand side of the operation, null if unary
+     * operation:   function delegate based on operator
      */
 
     private List<Formula> parentForms = new List<Formula>();
@@ -52,7 +53,6 @@ public class Formula<T>
     {
         return (this.lhs.evaluate + this.rhs.evaluate);
     }
-
 }
 
 public class Term<T>
@@ -74,6 +74,7 @@ public class Term<T>
         return this.val;
     }
 
+    // replace this with = operator overload I guess?
     public void setValue (T newVal)
     {
         this.val = newVal;
