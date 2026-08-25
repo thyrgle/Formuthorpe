@@ -1,6 +1,8 @@
-﻿namespace Formuthorpe;
+﻿// Terms need to be a subclass of formula that just has the operation and RHS voided
 
-public class Formula<T>
+namespace Formuthorpe;
+
+public class Formula<T> : FormObject
 {
     /* Fields 
      * parentForms: A list of parent formulas
@@ -9,7 +11,7 @@ public class Formula<T>
      * operation:   function delegate based on operator
      */
 
-    private List<Formula> parentForms = new List<Formula>();
+    private List<Formula<T>> parentForms = new List<Formula<T>>();
     private FormObject lhs;
     private FormObject rhs;
     private Func<T> operation;
@@ -24,26 +26,26 @@ public class Formula<T>
 
     public void update()
     {
-        this.val = this.evalute;
-        foreach (Formula form in this.parentForms)
+        this.val = this.evaluate();
+        foreach (Formula<T> form in this.parentForms)
         {
             form.update();
         }
     }
     
-    public T evaluate
+    public T evaluate()
     {
         return this.operation?.Invoke();
     }
     
     public void addParent(FormObject newParent)
     {
-        this.parentForms.append(newParent);
+        this.parentForms.Add(newParent);
     }
 
-    public static Formula operator +(FormObject a, FormObject b)) 
+    public static Formula<T> operator +(Formula<T> a, FormObject b)
     {
-        retForm = new Formula(a, b, addition); 
+        Formula<T> retForm = new Formula<T>(a, b, () => a.addition()); 
         a.addParent(retForm);
         b.addParent(retForm);
         return retForm;
@@ -55,21 +57,34 @@ public class Formula<T>
     }
 }
 
-public class Term<T>
+public class Term<T> : Formula
 {
     /* Fields
      *  parentForms: A list of tuples of parent formulas and this term's index in their operands
      *  val:         value held by the term 
      */
-    private List<Formula> parentForms = new List<Formula>();
+    private List<Formula<T>> parentForms = new List<Formula<T>>();
     private T val; 
+    private Formula lhs;
+    private Formula rhs = null;
+    private Func<T> operation = null;
+
 
     public Term(T initVal)
     {
         val = initVal; 
+        lhs = new Formula(initVal, null, null);
     }
 
-    public T evaluate
+    /*
+    * Now covered by superclass
+    public void addParent(FormObject newParent)
+    {
+        this.parentForms.Add(newParent);
+    }
+    */
+
+    public T evaluate()
     {
         return this.val;
     }
@@ -78,11 +93,11 @@ public class Term<T>
     public void setValue (T newVal)
     {
         this.val = newVal;
-        foreach (Formula form in this.parentForms)
+        this.lhs = new Formula(newVal, null, null);
+        foreach (Formula<T> form in this.parentForms)
         {
             form.update();
         }
     }
 }
 
-public union FormObject(Formula, Term)
