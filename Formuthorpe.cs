@@ -36,7 +36,7 @@ public class Compound<T>
         return this.operation?.Invoke();
     }
     
-    public void addParent(FormObject newParent)
+    private void addParent(FormObject newParent)
     {
         this.parentForms.append(newParent);
     }
