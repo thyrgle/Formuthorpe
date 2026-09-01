@@ -1,9 +1,9 @@
 ﻿namespace Formuthorpe;
 
-public class Formula<T>
+public class Compound<T>
 {
     /* Fields 
-     * parentForms: A list of parent formulas
+     * parentForms: A list of parent compound formula.
      * lhs:         Left hand side of the operation, only operand if unary
      * rhs:         Right hand side of the operation, null if unary
      * operation:   function delegate based on operator
@@ -85,4 +85,4 @@ public class Term<T>
     }
 }
 
-public union FormObject(Formula, Term)
+public union Formula(Compound, Term)
