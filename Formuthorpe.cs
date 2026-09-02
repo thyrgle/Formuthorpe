@@ -9,16 +9,14 @@ public class Compound<T>
      * operation:   function delegate based on operator
      */
 
-    private List<Formula> parentForms = new List<Formula>();
-    private FormObject lhs;
-    private FormObject rhs;
+    private List<Compound> parentForms = new List<Formula>();
+    private List<Formula> operands;
     private Func<T> operation;
     private T val;
 
-    public Formula (FormObject left, FormObject right, Func<T> op)
+    public Formula (List<Formula> operands, Func<T> op)
     {
-        lhs = left;
-        rhs = right;
+        this.operands = operands;
         operation = op; 
     }
 
@@ -41,18 +39,28 @@ public class Compound<T>
         this.parentForms.append(newParent);
     }
 
-    public static Formula operator +(FormObject a, FormObject b)) 
-    {
-        retForm = new Formula(a, b, addition); 
-        a.addParent(retForm);
-        b.addParent(retForm);
-        return retForm;
+
+    private static registerUnaryFunc(Func<T, T> op) {
+	return Func<T, T> res = (a) => { 
+	    Formula retForm = new Formula(a, op);
+            a.addParent(retForm);
+	    return retForm;
+	}
     }
 
-    private T addition()
-    {
-        return (this.lhs.evaluate + this.rhs.evaluate);
+    private static registerBinaryFunc(Func<T, T> op) {
+	return Func<T, T> res = (a, b) => { 
+	    Formula retForm = new Formula(a, op);
+            a.addParent(retForm);
+	    b.addParent(retForm);
+	    return retForm;
+	}
     }
+
+    public static Formula operator+ = registerBinaryFunc(Func<int, int, int> add = a + b);
+    public static Formula operator- = registerBinaryFunc(Func<int, int, int> add = a - b);
+    public static Formula operator* = registerBinaryFunc(Func<int, int, int> add = a * b);
+    public static Formula operator/ = registerBinaryFunc(Func<int, int, int> add = a / b);
 }
 
 public class Term<T>
