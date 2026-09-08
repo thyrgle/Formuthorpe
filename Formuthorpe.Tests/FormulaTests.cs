@@ -238,4 +238,156 @@ public class FormulaTests
 
         Assert.Equal(79.96m, total.Value);
     }
+
+    [Fact]
+    public void OnChange_FiresWhenTermValueChanges()
+    {
+        Term<int> a = new(2);
+        int fired = 0;
+        a.OnChange(() => fired++);
+
+        a.SetValue(3);
+
+        Assert.Equal(1, fired);
+    }
+
+    [Fact]
+    public void OnChange_DoesNotFireWhenTermSetToPreviousValue()
+    {
+        Term<int> a = new(2);
+        int fired = 0;
+        a.OnChange(() => fired++);
+
+        a.SetValue(2);
+
+        Assert.Equal(0, fired);
+    }
+
+    [Fact]
+    public void OnChange_FiresWhenFormulaValueChanges()
+    {
+        Term<int> a = new(2);
+        Term<int> b = new(3);
+        Formula<int> c = a + b;
+        int fired = 0;
+        c.OnChange(() => fired++);
+
+        a.SetValue(5);
+
+        Assert.Equal(1, fired);
+    }
+
+    [Fact]
+    public void OnChange_DoesNotFireWhenFormulaValueStaysTheSame()
+    {
+        // c = a * zero stays 0 no matter how a changes.
+        Term<int> a = new(5);
+        Term<int> zero = new(0);
+        Formula<int> c = a * zero;
+        int termFired = 0;
+        int formulaFired = 0;
+        a.OnChange(() => termFired++);
+        c.OnChange(() => formulaFired++);
+
+        a.SetValue(10);
+
+        Assert.Equal(1, termFired);
+        Assert.Equal(0, formulaFired);
+        Assert.Equal(0, c.Value);
+    }
+
+    [Fact]
+    public void OnChange_SupportsMultipleCallbacksOnOneFormula()
+    {
+        Term<int> a = new(1);
+        int first = 0;
+        int second = 0;
+        a.OnChange(() => first++);
+        a.OnChange(() => second++);
+
+        a.SetValue(2);
+
+        Assert.Equal(1, first);
+        Assert.Equal(1, second);
+    }
+
+    [Fact]
+    public void OnChange_FiresOncePerFormulaInDiamond()
+    {
+        Term<int> a = new(5);
+        Term<int> b = new(3);
+        Formula<int> m = a + b;
+        Formula<int> n = a - b;
+        Formula<int> p = m * n;
+        int fired = 0;
+        p.OnChange(() => fired++);
+
+        a.SetValue(7);
+
+        Assert.Equal(1, fired);
+    }
+
+    [Fact]
+    public void OnChange_CallbacksSeeSettledValues()
+    {
+        Term<int> a = new(2);
+        Term<int> b = new(3);
+        Formula<int> c = a + b;
+        Formula<int> d = c * 2;
+        int observed = 0;
+        c.OnChange(() => observed = d.Value);
+
+        a.SetValue(5);
+
+        Assert.Equal(16, observed);
+    }
+
+    [Fact]
+    public void OnChange_DoesNotFireAtRegistration()
+    {
+        Term<int> a = new(2);
+        Formula<int> c = a * 10;
+        int fired = 0;
+
+        c.OnChange(() => fired++);
+
+        Assert.Equal(0, fired);
+    }
+
+    [Fact]
+    public void OnChange_UnrelatedFormulaDoesNotFire()
+    {
+        Term<int> a = new(2);
+        Term<int> b = new(3);
+        Formula<int> sum = a + b;
+        Formula<int> product = a * b;
+        int sumFired = 0;
+        int productFired = 0;
+        sum.OnChange(() => sumFired++);
+        product.OnChange(() => productFired++);
+
+        b.SetValue(10);
+
+        Assert.Equal(1, sumFired);
+        Assert.Equal(1, productFired);
+
+        a.SetValue(4);
+
+        Assert.Equal(2, sumFired);
+        Assert.Equal(2, productFired);
+    }
+
+    [Fact]
+    public void OnChange_DoubleFiresOnlyOnRealChange()
+    {
+        Term<double> a = new(1.5);
+        int fired = 0;
+        a.OnChange(() => fired++);
+
+        a.SetValue(1.5);
+        Assert.Equal(0, fired);
+
+        a.SetValue(2.5);
+        Assert.Equal(1, fired);
+    }
 }

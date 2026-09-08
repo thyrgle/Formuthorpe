@@ -5,64 +5,106 @@ using System.Numerics;
 /// <summary>
 /// A node in a reactive arithmetic expression graph.
 /// Concrete nodes are either Term (a leaf holding a value) or Compound
-/// (an operation over other formulas). Reading Value always reflects
-/// the current state of every Term the formula depends on.
+/// (an operation over other formulas). Updates are eager: the moment a
+/// Term takes a new value, the change propagates upward and every
+/// dependent formula recomputes, so Value is always current.
 /// </summary>
 public abstract class Formula<T> where T : INumber<T>
 {
     /* Fields
-     * parentForms: formulas that use this one as an operand
-     * cachedValue: last computed value of this formula
-     * dirty:       true when cachedValue is stale and must be recomputed
+     * parentForms:       formulas that use this one as an operand
+     * cachedValue:       current value of this formula, recomputed eagerly at
+     *                    construction and whenever an operand below it changes
+     * onChangeCallbacks: callbacks invoked whenever this formula's value
+     *                    actually changes during an update
      */
 
     private readonly List<Formula<T>> parentForms = new();
+    private readonly List<Action> onChangeCallbacks = new();
     private T cachedValue = default!;
-    private bool dirty = true;
 
-    /// <summary>The current value of this formula, recomputing if stale.</summary>
-    public T Value
+    /// <summary>The current value of this formula; always up to date.</summary>
+    public T Value => cachedValue;
+
+    /// <summary>
+    /// Registers a callback that runs whenever this formula's value changes.
+    /// Callbacks fire only if the new value differs from the previous one;
+    /// setting a formula (or an operand beneath it) to a value that leaves
+    /// this formula's value unchanged does not invoke them.
+    /// </summary>
+    public void OnChange(Action callback) => onChangeCallbacks.Add(callback);
+
+    /// <summary>
+    /// Recomputes this formula's value and eagerly cascades the update to all
+    /// dependents. Dependents are recomputed in dependency order, each exactly
+    /// once, so no formula ever observes a stale operand along the way. Once
+    /// the whole graph is consistent again, the on-change callbacks of every
+    /// formula whose value actually changed are invoked.
+    /// </summary>
+    public void Update()
     {
-        get
+        // Collect in post-order (dependents before their operands), then pop
+        // the stack to recompute in the reverse: operands before dependents.
+        Stack<Formula<T>> order = new();
+        HashSet<Formula<T>> visited = new();
+        CollectDependents(order, visited);
+        List<Formula<T>> changed = new();
+        foreach (Formula<T> form in order)
         {
-            if (dirty)
+            T oldVal = form.cachedValue;
+            form.cachedValue = form.Evaluate();
+            if (!EqualityComparer<T>.Default.Equals(form.cachedValue, oldVal))
             {
-                cachedValue = Evaluate();
-                dirty = false;
+                changed.Add(form);
             }
-            return cachedValue;
+        }
+        // Fire only after every value has settled so callbacks observe a
+        // fully consistent graph.
+        foreach (Formula<T> form in changed)
+        {
+            form.FireOnChange();
         }
     }
 
-    /// <summary>Recomputes this formula's value and eagerly cascades the update to all dependents.</summary>
-    public void Update()
+    /// <summary>Invokes every callback registered through OnChange.</summary>
+    private void FireOnChange()
     {
-        dirty = true;
-        _ = Value;
-        foreach (Formula<T> form in parentForms)
+        foreach (Action callback in onChangeCallbacks)
         {
-            form.Update();
+            callback();
         }
     }
 
     /// <summary>Compute this formula's value from its operands (or stored value for terms).</summary>
     protected abstract T Evaluate();
 
+    /// <summary>Seeds the cached value from the operands; called once at construction.</summary>
+    protected void Refresh()
+    {
+        cachedValue = Evaluate();
+    }
+
     internal void AddParent(Formula<T> newParent)
     {
         parentForms.Add(newParent);
     }
 
-    /// <summary>Marks this formula and every dependent of it as stale.</summary>
-    internal void Invalidate()
+    /// <summary>
+    /// Gathers this formula and every transitive dependent in post-order,
+    /// skipping formulas already reached through an earlier path, so shared
+    /// dependents (diamonds) are collected exactly once.
+    /// </summary>
+    private void CollectDependents(Stack<Formula<T>> order, HashSet<Formula<T>> visited)
     {
-        // If we are already dirty then, by invariant, every ancestor is dirty too.
-        if (dirty) return;
-        dirty = true;
+        if (!visited.Add(this))
+        {
+            return;
+        }
         foreach (Formula<T> form in parentForms)
         {
-            form.Invalidate();
+            form.CollectDependents(order, visited);
         }
+        order.Push(this);
     }
 
     public override string ToString() => Value.ToString() ?? string.Empty;
@@ -99,8 +141,8 @@ public abstract class Formula<T> where T : INumber<T>
 }
 
 /// <summary>
-/// A leaf node holding an actual value. Changes propagate to every
-/// formula that depends on it.
+/// A leaf node holding an actual value. Setting a new value propagates
+/// eagerly to every formula that depends on it.
 /// </summary>
 public sealed class Term<T> : Formula<T> where T : INumber<T>
 {
@@ -113,20 +155,29 @@ public sealed class Term<T> : Formula<T> where T : INumber<T>
     public Term(T initVal)
     {
         val = initVal;
+        Refresh();
     }
 
     protected override T Evaluate() => val;
 
     public void SetValue(T newVal)
     {
+        // Setting the value it already holds changes nothing: skip the
+        // propagation entirely so no callbacks fire anywhere.
+        if (EqualityComparer<T>.Default.Equals(val, newVal))
+        {
+            return;
+        }
         val = newVal;
+        // Push the new value upward immediately; every dependent recomputes now.
         Update();
     }
 }
 
 /// <summary>
 /// An interior node applying an operation to one (unary) or two (binary)
-/// operand formulas. Its value is computed lazily from its operands.
+/// operand formulas. Its value is computed eagerly: once at construction
+/// and again whenever any operand below it changes.
 /// </summary>
 public sealed class Compound<T> : Formula<T> where T : INumber<T>
 {
@@ -146,6 +197,7 @@ public sealed class Compound<T> : Formula<T> where T : INumber<T>
     {
         lhs = operand;
         unaryOp = op;
+        Refresh();
     }
 
     public Compound(Formula<T> left, Formula<T> right, Func<T, T, T> op)
@@ -153,6 +205,7 @@ public sealed class Compound<T> : Formula<T> where T : INumber<T>
         lhs = left;
         rhs = right;
         binaryOp = op;
+        Refresh();
     }
 
     protected override T Evaluate() =>
