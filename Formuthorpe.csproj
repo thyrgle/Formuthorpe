@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Tests live in a nested project; keep them out of the library build. -->
+    <Compile Remove="Formuthorpe.Tests/**/*.cs" />
+  </ItemGroup>
+
 </Project>
