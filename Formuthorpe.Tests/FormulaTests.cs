@@ -391,3 +391,181 @@ public class FormulaTests
         Assert.Equal(1, fired);
     }
 }
+
+// Tests for user-registered Abelian group operations: values must track
+// exactly as with plain operations, but the update goes through the
+// inverse-based shortcut (v' = v ∘ inverse(xOld) ∘ xNew).
+public class AbelianOpTests
+{
+    // XOR: every element is its own inverse, identity is 0.
+    private static readonly AbelianOp<int> xor = new((x, y) => x ^ y, x => x, 0);
+
+    [Fact]
+    public void Abelian_CustomOperation_EvaluatesAndTracks()
+    {
+        Term<int> a = new(5);
+        Term<int> b = new(2);
+        Formula<int> c = Formula<int>.Abelian(a, b, xor);
+
+        Assert.Equal(7, c.Value);
+
+        a.SetValue(3);
+
+        Assert.Equal(1, c.Value);
+    }
+
+    [Fact]
+    public void Abelian_Chain_PatchesThroughEveryLevel()
+    {
+        Term<int> a = new(12);
+        Term<int> b = new(10);
+        Term<int> c = new(3);
+        Formula<int> ab = Formula<int>.Abelian(a, b, xor);
+        Formula<int> d = Formula<int>.Abelian(ab, c, xor);
+
+        Assert.Equal(6, ab.Value);
+        Assert.Equal(5, d.Value);
+
+        a.SetValue(1);
+
+        // ab = 1 ^ 10 = 11, d = 11 ^ 3 = 8
+        Assert.Equal(11, ab.Value);
+        Assert.Equal(8, d.Value);
+    }
+
+    [Fact]
+    public void Abelian_SharedOperand_DeltaAppliedPerOccurrence()
+    {
+        // p combines the very same formula in both operand slots: the
+        // operand's delta must be applied once per occurrence, not once
+        // per distinct formula.
+        Term<int> a = new(3);
+        Term<int> b = new(5);
+        Formula<int> m = Formula<int>.Abelian(a, b, xor);
+        Formula<int> p = Formula<int>.Abelian(m, m, xor);
+
+        Assert.Equal(6, m.Value);
+        Assert.Equal(0, p.Value);
+
+        a.SetValue(1);
+
+        // m = 1 ^ 5 = 4, p = m ^ m = 0; a single delta would give 0 ^ 6 ^ 4 = 2
+        Assert.Equal(4, m.Value);
+        Assert.Equal(0, p.Value);
+    }
+
+    [Fact]
+    public void Abelian_SharedOperandAggregateUnchanged_NoCallback()
+    {
+        Term<int> a = new(3);
+        Term<int> b = new(5);
+        Formula<int> m = Formula<int>.Abelian(a, b, xor);
+        Formula<int> p = Formula<int>.Abelian(m, m, xor);
+        int mFired = 0;
+        int pFired = 0;
+        m.OnChange(() => mFired++);
+        p.OnChange(() => pFired++);
+
+        a.SetValue(1);
+
+        Assert.Equal(1, mFired);
+        Assert.Equal(0, pFired);
+    }
+
+    [Fact]
+    public void Abelian_MultiplicativeGroupOverDoubles_Tracks()
+    {
+        // Multiplication over nonzero doubles: inverse is the reciprocal.
+        AbelianOp<double> mult = new((x, y) => x * y, x => 1 / x, 1.0);
+        Term<double> a = new(4.0);
+        Term<double> b = new(2.0);
+        Term<double> c = new(8.0);
+        Formula<double> ab = Formula<double>.Abelian(a, b, mult);
+        Formula<double> d = Formula<double>.Abelian(ab, c, mult);
+
+        Assert.Equal(64.0, d.Value);
+
+        a.SetValue(2.0);
+
+        // Powers of two keep the reciprocal patches exact.
+        Assert.Equal(4.0, ab.Value);
+        Assert.Equal(32.0, d.Value);
+    }
+
+    [Fact]
+    public void Mixed_AbelianAndPlainNodes_ProduceCorrectValues()
+    {
+        // Plain nodes below and above an Abelian node: only the Abelian
+        // node is patched; the plain ones recompute as before.
+        Term<int> a = new(2);
+        Term<int> b = new(3);
+        Term<int> c = new(10);
+        Formula<int> doubled = a * 2;
+        Formula<int> sum = doubled + b;
+        Formula<int> scaled = sum * c;
+
+        Assert.Equal(7, sum.Value);
+        Assert.Equal(70, scaled.Value);
+
+        a.SetValue(5);
+
+        Assert.Equal(13, sum.Value);
+        Assert.Equal(130, scaled.Value);
+
+        b.SetValue(0);
+
+        Assert.Equal(10, sum.Value);
+        Assert.Equal(100, scaled.Value);
+    }
+
+    [Fact]
+    public void Abelian_Diamond_BothOperandDeltasApply()
+    {
+        Term<int> a = new(2);
+        Term<int> b = new(3);
+        Formula<int> m = a + b;
+        Formula<int> n = a - b;
+        Formula<int> p = m + n;
+
+        Assert.Equal(5, m.Value);
+        Assert.Equal(-1, n.Value);
+        Assert.Equal(4, p.Value);
+
+        a.SetValue(7);
+
+        // m and n both change at once; p must absorb both deltas.
+        Assert.Equal(10, m.Value);
+        Assert.Equal(4, n.Value);
+        Assert.Equal(14, p.Value);
+    }
+
+    [Fact]
+    public void Update_MidLevelAbelianFormula_StaysConsistent()
+    {
+        Term<int> a = new(2);
+        Term<int> b = new(3);
+        Formula<int> c = a + b;
+        Formula<int> d = c + 1;
+
+        a.SetValue(5);
+        c.Update();
+
+        Assert.Equal(8, c.Value);
+        Assert.Equal(9, d.Value);
+    }
+
+    [Fact]
+    public void OnChange_AbelianFormula_FiresOnlyOnRealChange()
+    {
+        Term<int> a = new(2);
+        Term<int> b = new(3);
+        Formula<int> c = Formula<int>.Abelian(a, b, xor);
+        int fired = 0;
+        c.OnChange(() => fired++);
+
+        a.SetValue(4);
+
+        Assert.Equal(1, fired);
+        Assert.Equal(7, c.Value);
+    }
+}
