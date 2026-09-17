@@ -32,6 +32,7 @@ Console.WriteLine(z.Value); // 0 (so far same as before!)
 
 x.SetValue(1);
 y.SetValue(1);
+
 Console.WriteLine(x.Value); // 1
 Console.WriteLine(y.Value); // 1
 Console.WriteLine(z.Value); // 2 (z changed to reflect the fact that the sub-terms x and y changed!)
@@ -47,5 +48,5 @@ player_health.OnChange(() => Console.WriteLine("Player took damage!"));
 
 // ...
 
-player_health -= 1; (As soon as this finishes "Player took damage!" is printed, you don't worry about it!).
+player_health -= 1; // As soon as this finishes "Player took damage!" is printed, you don't worry about it!.
 ```
