@@ -11,4 +11,8 @@
     <Compile Remove="Formuthorpe.Tests/**/*.cs" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
 </Project>
