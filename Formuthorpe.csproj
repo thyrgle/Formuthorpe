@@ -4,10 +4,16 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Properties -->
+    <PackageId>RxdtLabs.Formuthorpe</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Christopher Sumnicht, Alex Grazela</Authors>
+    <Company>rxdt labs</Company>
+    <Description>A radically simple reactive programming library that allows variables to automatically update when their children expressions change.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Tests live in a nested project; keep them out of the library build. -->
     <Compile Remove="Formuthorpe.Tests/**/*.cs" />
   </ItemGroup>
 
